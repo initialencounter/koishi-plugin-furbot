@@ -4,7 +4,7 @@ const logger = new Logger(name)
 const BASE_URL = 'https://cloud.foxtail.cn/api';
 declare module 'koishi' {
   interface Tables {
-    account: FurBot.Account
+    furry_account: FurBot.Account
   }
 }
 class FurBot {
@@ -12,7 +12,7 @@ class FurBot {
   private constructor(private ctx: Context, config: FurBot.Config) {
     this.message_box = {}
     ctx.i18n.define('zh', require('./locales/zh'))
-    ctx.model.extend('account', {
+    ctx.model.extend('furry_account', {
       // 各字段类型
       id: 'unsigned',
       uid: 'string',
@@ -21,11 +21,9 @@ class FurBot {
       token: 'string',
       cookies: 'list'
     }, {
-      primary: 'id', //设置 uid 为主键
-      unique: ['id'], //设置 uid 为唯一键
-      foreign: {
-        id: ['user', 'id'], //将 uid 与 user 表的 id 绑定
-      }
+      primary: 'uid', //设置 uid 为主键
+      unique: ['uid','id'], //设置 uid及id 为唯一键
+      autoInc: true
     })
     ctx.before('attach-user', async ({ }, fields) => {
       fields.add('id')
@@ -331,16 +329,16 @@ class FurBot {
       if (token.token) {
 
         // 查询数据库是否存在账户
-        const account: FurBot.Account = (await this.ctx.database.get('account', { uid: [session.userId] }))[0];
+        const account: FurBot.Account = (await this.ctx.database.get('furry_account', { uid: [session.userId] }))[0];
         // 更新数据库
         if (account) {
-          await this.ctx.database.set('account', { uid: [session.userId] }, { token: token.token, cookies: response.headers['set-cookie'] })
+          await this.ctx.database.set('furry_account', { uid: [session.userId] }, { token: token.token, cookies: response.headers['set-cookie'] })
         } else {
-          await this.ctx.database.create('account', { uid: session.userId, token: token.token, cookies: response.headers['set-cookie'], account: option.account, password: option.password })
+          await this.ctx.database.create('furry_account', { uid: session.userId, token: token.token, cookies: response.headers['set-cookie'], account: option.account, password: option.password })
         }
         return session.text('messages.login.success', [token.token])
       }
-      return session.text('messages.login.failure', ['!token.token'])
+      return session.text('messages.login.failure', [token.msg])
     }
     catch (e) {
       logger.error(e);
@@ -349,7 +347,7 @@ class FurBot {
 
   }
   async getAccount(session: Session): Promise<FurBot.Account> {
-    const account: FurBot.Account = (await this.ctx.database.get('account', { uid: [session.userId] }))[0];
+    const account: FurBot.Account = (await this.ctx.database.get('furry_account', { uid: [session.userId] }))[0];
     return account
   }
   async makeGetRequest_buffer(url: string) {
